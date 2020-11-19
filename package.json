@@ -13,6 +13,7 @@
         "apollo-server": "^2.19.0",
         "async-redis": "^1.1.7",
         "axios": "^0.21.0",
+        "bluebird": "^3.7.2",
         "express": "^4.17.1",
         "express-graphql": "^0.11.0",
         "graphql": "^15.4.0",
