@@ -62,8 +62,8 @@ function uploadImageToCache(args) {
         "url": args.url,
         "posterName": args.posterName,
         "description": args.description,
-        "userPosted": true,
-        "binned": false
+        "userPosted": args.userPosted,
+        "binned": !args.binned
     }
     client.rpush("Image_List", JSON.stringify(image))
     return image
