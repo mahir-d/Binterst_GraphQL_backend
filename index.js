@@ -173,7 +173,7 @@ const resolvers = {
             })
             if (curr_image) {
                 let image_obj = await removeImage(0, JSON.stringify(curr_image))
-                return image_obj
+                return curr_image
             }
 
             return curr_image
