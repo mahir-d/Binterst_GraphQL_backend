@@ -139,6 +139,7 @@ const resolvers = {
             }
 
             let sortedImages = await client.zrevrangeAsync("sortedImages", 0, -1);
+            await client.DELAsync("sortedImages")
             console.log(sortedImages)
             let binned_images = []
             sortedImages.forEach(image_obj => {
