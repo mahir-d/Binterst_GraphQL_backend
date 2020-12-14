@@ -19,12 +19,13 @@ const typeDefs = gql`
     unSplashImages(pageNum: Int!): [ImagePost]
     binnedImages: [ImagePost]
     userPostedImages: [ImagePost]
+    getTopTenBinnedPosts: [ImagePost]
   }
 
   type Mutation{
     uploadImage(url: String!, description: String, posterName: String): ImagePost
     updateImage(id: ID!, url: String, posterName: String, description: String, 
-        userPosted: Boolean, binned: Boolean) : ImagePost
+        userPosted: Boolean, binned: Boolean, numBinned: Int) : ImagePost
     deleteImage(id: ID!): ImagePost
   }
 
@@ -35,6 +36,7 @@ const typeDefs = gql`
     description: String
     userPosted: Boolean!
     binned: Boolean!
+    numBinned: Int!
 }
 `;
 
@@ -55,6 +57,19 @@ async function removeImage(index, image) {
     return image_obj
 }
 
+async function binnedImages() {
+    let redis_len = await getLen()
+    image_list = await client.LRANGEAsync("Image_List", 0, redis_len)
+    let binned_images = []
+    image_list.map(image_obj => {
+        js_obj = JSON.parse(image_obj)
+        if (js_obj.binned == true) {
+            binned_images.push(js_obj)
+        }
+    })
+    return binned_images
+}
+
 
 function uploadImageToCache(args) {
     var image = {
@@ -63,7 +78,8 @@ function uploadImageToCache(args) {
         "posterName": args.posterName,
         "description": args.description,
         "userPosted": args.userPosted,
-        "binned": !args.binned
+        "binned": !args.binned,
+        "numBinned": args.numBinned
     }
     client.rpush("Image_List", JSON.stringify(image))
     return image
@@ -83,6 +99,7 @@ const resolvers = {
                     "url": image.urls.regular,
                     "posterName": image.user.name,
                     "description": image.description || image.alt_description,
+                    "numBinned": image.likes,
                     "userPosted": false,
                     "binned": false
                 }
@@ -113,6 +130,24 @@ const resolvers = {
             })
             return binned_images
 
+        },
+        async getTopTenBinnedPosts() {
+            let binImageList = await binnedImages();
+
+            for (const binI of binImageList) {
+                await client.zaddAsync("sortedImages", binI.numBinned.toString(), JSON.stringify(binI))
+            }
+
+            let sortedImages = await client.zrevrangeAsync("sortedImages", 0, -1);
+            console.log(sortedImages)
+            let binned_images = []
+            sortedImages.forEach(image_obj => {
+                js_obj = JSON.parse(image_obj)
+
+                binned_images.push(js_obj)
+
+            })
+            return binned_images
         }
     },
     Mutation: {
@@ -124,6 +159,7 @@ const resolvers = {
                 "url": args.url,
                 "posterName": args.posterName,
                 "description": args.description,
+                "numBinned": 0,
                 "userPosted": true,
                 "binned": false
             }
